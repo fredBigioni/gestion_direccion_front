@@ -1,0 +1,57 @@
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(255, 255, 255, 0.7);
+    /* Fondo semitransparente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    /* Para estar encima del resto */
+}
+
+.loader {
+    display: flex;
+}
+
+.dot {
+    width: 15px;
+    height: 15px;
+    background-color: #333;
+    border-radius: 50%;
+    margin: 0 5px;
+    animation: bounce 1.5s infinite ease-in-out;
+}
+
+.dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateX(0);
+        animation-timing-function: ease-in;
+    }
+
+    50% {
+        transform: translateX(20px);
+        animation-timing-function: ease-out;
+    }
+}

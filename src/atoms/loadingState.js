@@ -1,0 +1,7 @@
+// src/atoms/loadingState.js
+import { atom } from 'recoil';
+
+export const loadingState = atom({
+    key: 'loadingState',
+    default: false
+});

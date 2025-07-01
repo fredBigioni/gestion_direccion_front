@@ -1,0 +1,113 @@
+.registro-grid__wrapper {
+    padding: 0 32px 32px 32px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.registro-grid__title {
+    color: #5ba79c;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+th.blue-header {
+    background-color: #cde6f7;
+    font-weight: bold;
+}
+
+th.yellow-header {
+    background-color: #ffe79a;
+    font-weight: bold;
+}
+
+th.salmon-header {
+    background-color: #fdb8a4;
+    font-weight: bold;
+}
+
+th.green-header{
+    background-color: #7acf7a;
+    font-weight: bold;
+}
+
+/* Fila de totales */
+tr.totals-row {
+    background-color: white;
+    font-weight: bold;
+}
+
+tr.totals-row td.green-text {
+    color: #007f00;
+    /* Verde fuerte */
+}
+
+.delete-icon{
+    color: red;    
+    border-right: none;
+}
+
+.registro-grid {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    overflow-x: auto;
+}
+
+.registro-grid th,
+.registro-grid td {
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.header-year {
+    background: #b0bec5;
+    color: white;
+}
+
+.header-var {
+    background: #ef9a9a;
+    color: white;
+}
+
+.text-red {
+    color: red;
+    font-weight: bold;
+}
+
+.text-green {
+    color: green;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .registro-grid {
+        font-size: 12px;
+    }
+}
+
+.row-disabled:hover {
+    background-color: rgba(56, 142, 60, 0.15);
+    cursor: default;
+}
+
+.row-enabled:hover {
+    background-color: rgba(56, 142, 60, 0.1);
+    cursor: pointer;
+}
+
+.row-disabled {
+    background-color: rgba(56, 142, 60, 0.15);
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.row-disabled * {
+    pointer-events: none;
+}
+
+.btn-add {
+    color: #6cbcaa;
+    font-weight: bold;
+}
