@@ -16,7 +16,7 @@ export const Login = () => {
 
     const handleSubmit = async (event) => {
         event?.preventDefault(); // Prevenir el comportamiento por defecto del formulario
-        setIsLoading(true);
+      setIsLoading(true);
         await login(email, password);
         setIsLoading(false);
     };

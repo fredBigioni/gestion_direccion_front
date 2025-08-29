@@ -8,9 +8,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0.96));
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
     padding: 16px 30px;
     width: 100%;
     box-sizing: border-box;
@@ -24,10 +25,13 @@
 }
 
 .control-panel__title {
-    font-size: 1.2rem;
+    font-size: clamp(14px, 4.5vw, 19px);
     font-weight: 600;
     color: #5ba79c;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Botón circular con + */
@@ -54,7 +58,7 @@
 /* Filtros a la derecha */
 .control-panel__right {
     display: flex;
-    gap: 24px;
+    gap: 16px;
 }
 
 .control-panel__field {
@@ -81,8 +85,8 @@
 @media (max-width: 768px) {
     .control-panel {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: stretch;
+        gap: 12px;
     }
 
     .control-panel__right {

@@ -1,114 +1,97 @@
 // src/api/api.js
+
 import axios from 'axios';
 import { getRecoil, setRecoil } from 'recoil-nexus';
 import { loadingState, accessTokenState, authState } from '../atoms';
-// Asegúrate de que authUserState existe para limpiar info de usuario cuando haga logout
+import { message } from 'antd';
 
-// Crear instancia de Axios
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
-    withCredentials: true, // importante para enviar cookie de refresh-token
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    withCredentials: true,
+    headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor de request: adjuntar access token
+// Petición normal: ponemos loading y adjuntamos accessToken
 api.interceptors.request.use(
-    (config) => {
+    config => {
         setRecoil(loadingState, true);
         const token = getRecoil(accessTokenState);
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+        if (token) config.headers.Authorization = `Bearer ${token}`;
         return config;
     },
-    (error) => {
+    err => {
         setRecoil(loadingState, false);
-        return Promise.reject(error);
+        return Promise.reject(err);
     }
 );
 
-// Función auxiliar para limpiar estado y redirigir
-async function handleLogoutCleanup() {
+// Función interna para refrescar token sin ciclos infinitos
+let isRefreshing = false;
+let pendingRequests = [];
+
+async function tryRefreshToken() {
+    if (isRefreshing) {
+        // Si ya hay un refresh en curso, esperamos a que termine
+        return new Promise((resolve, reject) => {
+            pendingRequests.push({ resolve, reject });
+        });
+    }
+    isRefreshing = true;
     try {
-        // Llamar al endpoint de logout para que el backend borre la cookie refreshToken
-        // Usamos una nueva instancia o la misma api. Para evitar bucle de interceptores,
-        // podemos usar axios sin interceptores o deshabilitar temporalmente interceptors.
-        await axios.post(
-            `${import.meta.env.VITE_API_URL}/auth/logout`,
-            null,
-            {
-                withCredentials: true,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }
+        
+        const res = await axios.post(
+            `${import.meta.env.VITE_API_URL}/auth/refresh-token`,{},{ withCredentials: true }
         );
+        const newToken = res.data.accessToken;
+        // Actualizo Recoil
+        setRecoil(accessTokenState, newToken);
+        // Resolviendo todas las peticiones en espera
+        pendingRequests.forEach(p => p.resolve(newToken));
+        pendingRequests = [];
+        return newToken;
     } catch (err) {
-        console.warn('Error llamando endpoint logout en backend:', err);
-    }
-    // Limpiar Recoil: accessToken y user
-    setRecoil(accessTokenState, null);
-    // Si tienes authUserState u otro atom, limpiarlo:
-    if (authState) {
+        // Si falla refrescar, limpio estado y rechazo todas
+        setRecoil(accessTokenState, '');
         setRecoil(authState, null);
+        pendingRequests.forEach(p => p.reject(err));
+        pendingRequests = [];
+        throw err;
+    } finally {
+        isRefreshing = false;
     }
-    // Redirigir al login. Puedes usar window.location o tu router
-    window.location.href = '/login';
 }
 
-// Interceptor de response: manejar refresh token y logout
+// Interceptor de respuestas
 api.interceptors.response.use(
-    (response) => {
+    response => {
         setRecoil(loadingState, false);
         return response;
     },
-    async (error) => {
+    async error => {
         setRecoil(loadingState, false);
-        const originalRequest = error.config;
 
-        // Si no hay response o config, rechazar
-        if (!error.response || !originalRequest) {
-            return Promise.reject(error);
-        }
+        const originalRequest = error.config;
+        if (!error.response || !originalRequest) return Promise.reject(error);
 
         const status = error.response.status;
 
-        // 401: token inválido o expirado. Hacemos logout
-        if (status === 401) {
-            // Evitar múltiples llamadas:
-            if (!originalRequest._retryLogout) {
-                originalRequest._retryLogout = true;
-                await handleLogoutCleanup();
-            }
-            return Promise.reject(error);
-        }
-
-        // 403: puedes interpretar como token expirado y tratar de refresh
-        // (Solo si tu backend usa 403 para token expirado, de lo contrario usualmente es 401)
-        // En tu ejemplo, usabas 403 para refresh. Ajusta según backend.
-        if (status === 403 && !originalRequest._retry) {
+        // Si recibimos 401 ó 403, tratamos de refrescar el token
+        if ((status === 401 || status === 403) && !originalRequest._retry) {
             originalRequest._retry = true;
             try {
-                // Llamar refresh-token: backend debe leer cookie refreshToken y devolver nuevo accessToken
-                const res = await api.post('/auth/refresh-token');
-                const newAccessToken = res.data.accessToken;
-                // Actualizar Recoil
-                setRecoil(accessTokenState, newAccessToken);
-                // Actualizar encabezado de la solicitud original
-                originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-                // Reintentar la solicitud original
+                const newToken = await tryRefreshToken();
+                // Actualizar header y reintentar la llamada original
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
                 return api(originalRequest);
             } catch (err) {
-                console.error('No se pudo refrescar el token:', err);
-                // Si falla el refresh, hacemos logout
-                await handleLogoutCleanup();
+                // Si falla refrescar: redirigimos al login limpiando estado
+                message.error('La sesión expiró. Por favor, ingresa de nuevo.');
+                window.location.href = '/login';
                 return Promise.reject(err);
             }
         }
 
-        // Otros errores: rechazar
+        // Otros errores
         return Promise.reject(error);
     }
 );

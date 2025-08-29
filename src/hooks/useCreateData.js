@@ -13,20 +13,25 @@ import { message } from "antd";
 const useCreateData = () => {
     const [isLoading, setIsLoading] = useRecoilState(loadingState);
 
+    const getPeriodosXRepresentacion = async (representacionId) => {
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/home/getEnabledPeriods/${representacionId}`);
+            return response.data.periods;
+        } catch (error) {
+            console.error('Error en createData:', error);
+            const errorMsg = error.response?.data?.message || error.message || 'Error desconocido';
+            message.error(`Error al crear la información: ${errorMsg}`);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     const createData = async (formData) => {
         try {
             setIsLoading(true);
-            debugger;
-            const response = await api.post(
-                `/home/postData`,
-                formData,
-                {
-                    headers: {
-                        // Deja que el navegador/Axios añada el boundary
-                        'Content-Type': 'multipart/form-data'
-                    }
-                }
-            );
+            const response = await api.post(`/home/postData`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             message.success('Registro creado correctamente');
             return response.data;
         } catch (error) {
@@ -42,15 +47,7 @@ const useCreateData = () => {
     const updateData = async (id, formData) => {
         try {
             setIsLoading(true);
-            const response = await api.put(
-                `/home/putData/${id}`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                }
-            );
+            const response = await api.put(`/home/putData/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             message.success('Registro actualizado correctamente');
             return response.data;
         } catch (error) {
@@ -66,6 +63,7 @@ const useCreateData = () => {
     return {
         createData,
         updateData,
+        getPeriodosXRepresentacion,
         isLoading,
     };
 };

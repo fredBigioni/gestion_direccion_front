@@ -4,23 +4,27 @@ import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRou
 import { AddRegistroModal } from '../modal';
 import { ComboBoxComponent } from '../combos';
 
-export const ControlPanel = () => {
+export const ControlPanel = ({ user }) => {
     const [open, setOpen] = useState(false);
 
     return (
         <>
-            <div className="control-panel__wrapper">
-                <div className="control-panel">
-                    <div className="control-panel__left">
-                        <h2 className="control-panel__title">Perfil de Control</h2>
-                        {/* <AddCircleOutlineRoundedIcon onClick={() => setOpen(true)} className='control-panel__add-btn' /> */}
+            {/* {user.rol.name.toLowerCase() == 'control' || user.rol.name.toLowerCase() == 'admin' ? <> */}
+                <div className="control-panel__wrapper">
+                    <div className="control-panel">
+                        <div className="control-panel__left">
+                            <h2 className="control-panel__title">{user.firstName + ' ' + user.lastName + ' - '} Perfil de {user.rol.name}</h2>
+                        </div>
+                        <ComboBoxComponent user={user} />
                     </div>
-                    <ComboBoxComponent />
                 </div>
-            </div>
 
-            {/* Modal */}
-            < AddRegistroModal open={open} onClose={() => setOpen(false)} />
+                {/* Modal */}
+                < AddRegistroModal open={open} onClose={() => setOpen(false)} />
+            {/* </> :
+                <></>
+            } */}
+
         </>
     );
 };

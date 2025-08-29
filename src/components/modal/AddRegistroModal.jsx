@@ -1,5 +1,3 @@
-// src/components/modal/AddRegistroModal.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
     Dialog,
@@ -26,7 +24,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
     const { companyTypes } = useHome();
     const isEditMode = Boolean(initialData);
-    const { createData, updateData } = useCreateData();
+    const { createData, updateData, getPeriodosXRepresentacion } = useCreateData();
 
     // Estado de formulario
     const [form, setForm] = useState({
@@ -34,6 +32,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
         periodo: '',
         unidades: '',
         valores: '',
+        valoresLocal: '',
         promedio: '',
         tc: '',
     });
@@ -41,21 +40,34 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
     const [focus, setFocus] = useState({
         unidades: false,
         valores: false,
-        promedio: false,
+        valoresLocal: false,
         tc: false,
     });
     // Archivos
     const [files, setFiles] = useState([]);
+    // Periodos habilitados según tipo
+    const [enabledPeriods, setEnabledPeriods] = useState([]);
 
     const monthOrder = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
 
+    // Cuando cambia la representación, pedimos los periodos habilitados
+    useEffect(() => {
+        if (!form.tipo) {
+            setEnabledPeriods([]);
+            return;
+        }
+        (async () => {
+            const periods = await getPeriodosXRepresentacion(form.tipo);
+            setEnabledPeriods(periods);
+        })();
+    }, [form.tipo]);
+
     // Formatea miles y conserva decimales (según los que el usuario escribió)
     const formatDisplay = raw => {
         if (!raw) return '';
-        // split raw en parte entera y decimal
         const [intPart, decPart] = raw.split('.');
         const num = Number(intPart.replace(/\D/g, '')) || 0;
         const formattedInt = num.toLocaleString('es-AR');
@@ -64,12 +76,21 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
             : formattedInt;
     };
 
+    // Calcula precio promedio automáticamente
+    useEffect(() => {
+        const unidadesNum = parseFloat(form.unidades) || 0;
+        const valoresNum = parseFloat(form.valores) || 0;
+        const promedioCalc = unidadesNum > 0
+            ? (valoresNum / unidadesNum).toFixed(2)
+            : '';
+        setForm(f => ({ ...f, promedio: promedioCalc }));
+    }, [form.unidades, form.valores]);
+
     // Inicializa form y files al abrir
     useEffect(() => {
         if (!open) return;
 
         if (isEditMode) {
-            // tu lógica existente para mapear initialData a form...
             let tipoValue = '';
             if (initialData.representacion != null) {
                 const f = companyTypes?.find(ct => ct.name.toLowerCase() === initialData.representacion.toLowerCase());
@@ -78,6 +99,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
             const periodoValue = initialData.mes || '';
             const unidadesRaw = initialData.datosAnioActual?.unidades?.toString() ?? '';
             const valoresRaw = initialData.datosAnioActual?.usd?.toString() ?? '';
+            const valoresLocalRaw = initialData.datosAnioActual?.monedaLocal?.toString() ?? '';
             const promedioRaw = initialData.datosAnioActual?.precio?.toString() ?? '';
             const tcRaw = initialData.datosAnioActual?.tc?.toString() ?? '';
 
@@ -86,15 +108,15 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                 periodo: periodoValue,
                 unidades: unidadesRaw,
                 valores: valoresRaw,
+                valoresLocal: valoresLocalRaw,
                 promedio: promedioRaw,
                 tc: tcRaw,
             });
-            setFocus({ unidades: false, valores: false, promedio: false, tc: false });
+            setFocus({ unidades: false, valores: false, valoresLocal: false, tc: false });
         } else {
-            setForm({ tipo: '', periodo: '', unidades: '', valores: '', promedio: '', tc: '' });
-            setFocus({ unidades: false, valores: false, promedio: false, tc: false });
+            setForm({ tipo: '', periodo: '', unidades: '', valores: '', valoresLocal: '', promedio: '', tc: '' });
+            setFocus({ unidades: false, valores: false, valoresLocal: false, tc: false });
         }
-
         setFiles([]);
     }, [open, initialData, isEditMode, companyTypes]);
 
@@ -122,11 +144,11 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
         setFiles(Array.from(e.target.files));
     };
 
-    const isFormValid = form.tipo && form.periodo
-        && form.unidades.trim() !== ''
-        && form.valores.trim() !== ''
-        && form.promedio.trim() !== ''
-        && form.tc.trim() !== '';
+    const isFormValid = Boolean(form.tipo && form.periodo
+        && String(form.unidades ?? '').trim() !== ''
+        && String(form.valores ?? '').trim() !== ''
+        && String(form.valoresLocal ?? '').trim() !== ''
+        && String(form.tc ?? '').trim() !== '');
 
     const handleSave = async () => {
         if (!isFormValid) return;
@@ -134,6 +156,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
         payload.append('tipo', form.tipo);
         payload.append('periodo', form.periodo);
         payload.append('unidades', form.unidades);
+        payload.append('valoresLocal', form.valoresLocal);
         payload.append('valores', form.valores);
         payload.append('promedio', form.promedio);
         payload.append('tc', form.tc);
@@ -167,13 +190,14 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
             fullScreen={fullScreen}
             fullWidth
             maxWidth="xs"
-            scroll="paper"
+            scroll="body"
+            PaperProps={{ sx: { borderRadius: 2, boxShadow: 'var(--shadow-md)', maxWidth: 420, width: '100%' } }}
         >
-            <DialogTitle sx={{ color: '#1976d2', pt: 1, pb: 1, mb: 2 }}>
+            <DialogTitle sx={{ color: '#1976d2', pt: 1.5, pb: 1.5, mb: 0 }}>
                 {isEditMode ? 'Editar Registro' : 'Agregar Registro'}
             </DialogTitle>
-            <DialogContent sx={{ px: 0, py: 0 }}>
-                <Box sx={{ pt: 3, px: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DialogContent sx={{ px: { xs: 1.5, sm: 2 }, pt: 1, pb: 2 }}>
+                <Box sx={{ pt: 1, px: 0, display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
                     {/* Representación */}
                     <FormControl fullWidth size="small">
                         <InputLabel id="tipo-label">Representación</InputLabel>
@@ -199,10 +223,12 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                             label="Periodo"
                             onChange={handleChange('periodo')}
                         >
-                            <MenuItem value=""><em>Selecciona</em></MenuItem>
-                            {monthOrder.map(mes =>
-                                <MenuItem key={mes} value={mes}>{mes}</MenuItem>
-                            )}
+                            <MenuItem value=""><em>Seleccione un periodo</em></MenuItem>
+                            {monthOrder.map(m => (
+                                <MenuItem key={m} value={m} disabled={!enabledPeriods.includes(m) && !(isEditMode && m === form.periodo)}>
+                                    {m} - {(new Date).getFullYear().toLocaleString()}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
 
@@ -219,6 +245,17 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                         onBlur={handleBlur('unidades')}
                     />
 
+                    <TextField
+                        fullWidth size="small"
+                        label="Valores En Pesos"
+                        value={focus.valoresLocal
+                            ? form.valoresLocal
+                            : formatDisplay(form.valoresLocal)
+                        }
+                        onChange={handleNumericChange('valoresLocal')}
+                        onFocus={handleFocus('valoresLocal')}
+                        onBlur={handleBlur('valoresLocal')}
+                    />
                     {/* Valores USD */}
                     <TextField
                         fullWidth size="small"
@@ -232,17 +269,12 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                         onBlur={handleBlur('valores')}
                     />
 
-                    {/* Precio Promedio */}
+                    {/* Precio Promedio (calculado) */}
                     <TextField
                         fullWidth size="small"
                         label="Precio Promedio"
-                        value={focus.promedio
-                            ? form.promedio
-                            : formatDisplay(form.promedio)
-                        }
-                        onChange={handleNumericChange('promedio')}
-                        onFocus={handleFocus('promedio')}
-                        onBlur={handleBlur('promedio')}
+                        value={formatDisplay(form.promedio)}
+                        disabled
                     />
 
                     {/* TC USD Promedio */}
@@ -259,12 +291,13 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                     />
 
                     {/* Archivos */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 1, gridColumn: '1' }}>
                         <input
                             accept="*"
                             id="file-input"
                             type="file"
                             multiple
+                            name="documentos"
                             onChange={handleFileChange}
                             style={{ display: 'none' }}
                         />
@@ -281,7 +314,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                 </Box>
             </DialogContent>
 
-            <DialogActions sx={{ px: 2, py: 1 }}>
+            <DialogActions sx={{ px: 2, py: 1.5 }}>
                 <Button onClick={onClose} sx={{ color: '#1976d2' }}>Cancelar</Button>
                 <Button
                     onClick={handleSave}

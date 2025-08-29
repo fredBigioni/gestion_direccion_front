@@ -18,6 +18,7 @@ const useAuth = () => {
         try {
             const response = await api.post('/auth/login', { username, password }, { withCredentials: true });
 
+            
             if (response && response.data.auth) {
                 message.success(response.data.message)
                 setAccessToken(response.data.accessToken);
@@ -36,7 +37,7 @@ const useAuth = () => {
     // Función para cerrar sesión
     const logout = async () => {
         try {
-            setIsLoading(true);
+          setIsLoading(true);
             await api.post('/auth/logout', {}, { withCredentials: true });
             setAccessToken('');            
             setAuth(null);
