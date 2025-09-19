@@ -31,6 +31,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
         tipo: '',
         periodo: '',
         unidades: '',
+        unidadesConvertidas: '',
         valores: '',
         valoresLocal: '',
         promedio: '',
@@ -39,6 +40,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
     // Focus por campo
     const [focus, setFocus] = useState({
         unidades: false,
+        unidadesConvertidas: false,
         valores: false,
         valoresLocal: false,
         tc: false,
@@ -243,6 +245,19 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                         onChange={handleNumericChange('unidades')}
                         onFocus={handleFocus('unidades')}
                         onBlur={handleBlur('unidades')}
+                    />
+
+                    {/* Unidades convertidas*/}
+                    <TextField
+                        fullWidth size="small"
+                        label="Unidades Convertidas"
+                        value={focus.unidadesConvertidas
+                            ? form.unidadesConvertidas
+                            : formatDisplay(form.unidadesConvertidas)
+                        }
+                        onChange={handleNumericChange('unidadesConvertidas')}
+                        onFocus={handleFocus('unidadesConvertidas')}
+                        onBlur={handleBlur('unidadesConvertidas')}
                     />
 
                     <TextField

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     IconButton,
     Dialog,
@@ -46,27 +46,68 @@ export const RegistroGridActions = ({ user, row, handleDelete, handleFiles }) =>
         return `${dd}/${mm}/${yyyy} ${HH}:${MM} Hs`;
     };
 
-    // Helpers para historial (parseo simple + redacción amigable)
+    // Helpers para historial (parseo más tolerante + redacción amigable)
     const parseHistoryItem = (raw) => {
-        const text = String(raw).replace(/^\s*•\s*/, '').trim();
-        // Ej: 2025-08-28 16:12:26 - Control (Juan Perez) [adelante Δ+1] - Obs: "nota"
-        const m = text.match(
-            /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})\s*[-]\s*([^\(\[]+)\s*\(([^)]+)\)?(.*)$/
+        const text = String(raw).replace(/^\s*\u0007\s*/, '').trim();
+
+        // Intento 1: "YYYY-MM-DD HH:mm[:ss] - Etapa (Usuario) ..."
+        let m = text.match(
+            /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)\s*-\s*([^\(\[]+)\s*\(([^)]+)\)?(.*)$/
         );
-        const ts = m ? `${m[1]}T${m[2]}` : '';
-        const stage = m ? m[3].trim() : '';
-        const usr = m ? m[4].trim() : '';
-        const tail = m ? m[5] : text;
+
+        let ts = '';
+        let stage = '';
+        let usr = '';
+        let tail = text;
+
+        if (m) {
+            ts = `${m[1]}T${m[2].length === 5 ? m[2] + ':00' : m[2]}`;
+            stage = (m[3] || '').trim();
+            usr = (m[4] || '').trim();
+            tail = m[5] || '';
+        } else {
+            // Intento 2: "Etapa (Usuario) - YYYY-MM-DD HH:mm[:ss] ..."
+            m = text.match(
+                /([^\(\[]+)\s*\(([^)]+)\)\s*-\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)(.*)$/
+            );
+            if (m) {
+                stage = (m[1] || '').trim();
+                usr = (m[2] || '').trim();
+                ts = `${m[3]}T${m[4].length === 5 ? m[4] + ':00' : m[4]}`;
+                tail = m[5] || '';
+            } else {
+                // Intento 3: detectar fecha en cualquier lugar (ISO o dd/MM/yyyy)
+                const iso = text.match(/(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)/);
+                const latam = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)/);
+                if (iso) {
+                    ts = `${iso[1]}T${iso[2].length === 5 ? iso[2] + ':00' : iso[2]}`;
+                } else if (latam) {
+                    const dd = latam[1];
+                    const mm = latam[2];
+                    const yyyy = latam[3];
+                    const hhmm = latam[4];
+                    ts = `${yyyy}-${mm}-${dd}T${hhmm.length === 5 ? hhmm + ':00' : hhmm}`;
+                }
+
+                // Etapa y usuario por aproximación
+                const stageMatch = text.match(/\b(Carga|Control|Aprobaci[\u00F3o]n|Aprobacion|Finalizado)\b/i);
+                stage = stageMatch ? stageMatch[1] : '';
+                const userMatch = text.match(/\(([^)]+)\)/);
+                usr = userMatch ? userMatch[1] : '';
+                tail = text;
+            }
+        }
+
         const tlow = tail.toLowerCase();
         const direction = tlow.includes('adelante')
             ? 'forward'
-            : tlow.includes('atr')
+            : (tlow.includes('atr') || tlow.includes('devolv'))
                 ? 'back'
                 : tlow.includes('[inicio]')
                     ? 'start'
                     : '';
-        const noteMatch = tail.match(/Obs:\s*"?([^"\n]+)"?/);
-        const note = noteMatch ? noteMatch[1] : '';
+        const noteMatch = tail.match(/Obs:\s*\"?([^\"\n]+)\"?|Observaciones?:\s*\"?([^\"\n]+)\"?/i);
+        const note = noteMatch ? (noteMatch[1] || noteMatch[2] || '') : '';
         return { ts, stage, user: usr, direction, note };
     };
 
@@ -76,19 +117,28 @@ export const RegistroGridActions = ({ user, row, handleDelete, handleFiles }) =>
         const st = (stage || '').toLowerCase();
 
         if (direction === 'start') {
-            return `El usuario ${user} creó el registro el ${dateStr}.`;
+            return `El usuario ${user} creó el registro${dateStr ? ` el ${dateStr}` : ''}.`;
         }
         if (direction === 'back') {
-            return `El usuario ${user} devolvió el registro (${stage}) el ${dateStr}${note ? ` con la justificación: "${note}"` : ''
-                }.`;
+            const stPart = stage ? ` (${stage})` : '';
+            const dtPart = dateStr ? ` el ${dateStr}` : '';
+            return `El usuario ${user} devolvió el registro${stPart}${dtPart}${note ? ` con la justificación: "${note}"` : ''}.`;
         }
-        const verb =
-            st === 'aprobacion' || st === 'aprobación'
-                ? 'aprobó'
-                : st === 'control'
-                    ? 'realizó el control del'
-                    : 'avanzó en el';
-        return `El usuario ${user} ${verb} registro el ${dateStr}. (${stage})`;
+
+        // Forward o movimiento normal: el texto debe reflejar envío al siguiente estado
+        let sentence = '';
+        if (st === 'control') {
+            sentence = `El usuario ${user} envió el registro para su control${dateStr ? ` el ${dateStr}` : ''}.`;
+        } else if (st === 'aprobacion' || st === 'aprobación') {
+            sentence = `El usuario ${user} envió el registro para su aprobación${dateStr ? ` el ${dateStr}` : ''}.`;
+        } else if (st === 'finalizado') {
+            // Llegó a finalizado: alguien con Aprobación lo aprobó/finalizó
+            sentence = `El usuario ${user} aprobó y finalizó el registro${dateStr ? ` el ${dateStr}` : ''}.`;
+        } else {
+            // Desconocido: fallback neutro
+            sentence = `El usuario ${user} avanzó en el registro${dateStr ? ` el ${dateStr}` : ''}.`;
+        }
+        return sentence;
     };
 
     const openHistory = async (e, r) => {
@@ -263,10 +313,20 @@ export const RegistroGridActions = ({ user, row, handleDelete, handleFiles }) =>
         <>
             {renderActions()}
 
-            <Dialog open={historyOpen} onClose={closeHistory} fullWidth maxWidth="sm">
-                <DialogTitle>Historial del registro</DialogTitle>
-                <DialogContent dividers>{renderHistoryBodyFriendly()}</DialogContent>
-                <DialogActions>
+            <Dialog
+                open={historyOpen}
+                onClose={closeHistory}
+                fullWidth
+                maxWidth="sm"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+            >
+                <DialogTitle onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>Historial del registro</DialogTitle>
+                <DialogContent dividers onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                    {renderHistoryBodyFriendly()}
+                </DialogContent>
+                <DialogActions onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                     <Button onClick={closeHistory} variant="contained">
                         Cerrar
                     </Button>

@@ -24,7 +24,7 @@ export const RegistroDetalleModal = ({ open, onClose, row, onEdit }) => {
             <Typography variant="subtitle2" sx={{ mb: 1, color: '#9c7b3e' }}>{new Date().getFullYear() - 1} (Anterior)</Typography>
             <LeftCol title="Unidades" value={formatNumber(row.datosAnioAnterior.unidades)} />
             <LeftCol title="Precio Prom." value={formatNumberDecimals(row.datosAnioAnterior.precio, 2)} />
-            <LeftCol title="Valores ARS" value={formatNumber(row.datosAnioAnterior.monedaLocal)} />
+            <LeftCol title="Valores Moneda Local" value={formatNumber(row.datosAnioAnterior.monedaLocal)} />
             <LeftCol title="Valores USD" value={formatNumber(row.datosAnioAnterior.usd)} />
             <LeftCol title="TC Prom." value={formatNumberDecimals(row.datosAnioAnterior.tc, 2)} />
           </Box>
@@ -34,7 +34,7 @@ export const RegistroDetalleModal = ({ open, onClose, row, onEdit }) => {
             <Typography variant="subtitle2" sx={{ mb: 1, color: '#5ba79c' }}>{new Date().getFullYear()} (Actual)</Typography>
             <LeftCol title="Unidades" value={formatNumber(row.datosAnioActual.unidades)} />
             <LeftCol title="Precio Prom." value={formatNumberDecimals(row.datosAnioActual.precio, 2)} />
-            <LeftCol title="Valores ARS" value={formatNumber(row.datosAnioActual.monedaLocal)} />
+            <LeftCol title="Valores Moneda Local" value={formatNumber(row.datosAnioActual.monedaLocal)} />
             <LeftCol title="Valores USD" value={formatNumber(row.datosAnioActual.usd)} />
             <LeftCol title="TC Prom." value={formatNumberDecimals(row.datosAnioActual.tc, 2)} />
           </Box>

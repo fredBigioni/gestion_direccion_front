@@ -96,7 +96,7 @@ export const RegistroGrid = ({ user }) => {
         const update = () => {
             const width = window.innerWidth;
             const isCoarse = window.matchMedia('(pointer: coarse)').matches; // pantallas táctiles
-            // Compacto si: teléfono/tablet (ancho <= 1024) o dispositivo tÃ¡ctil hasta 1366 (iPad Pro landscape)
+            // Compacto si: teléfono/tablet (ancho <= 1024) o dispositivo táctil hasta 1366 (iPad Pro landscape)
             const compact = (width <= 1024) || (isCoarse && width <= 1366);
             setIsCompact(compact);
         };
@@ -118,17 +118,13 @@ export const RegistroGrid = ({ user }) => {
 
         const rows = transformToGridRows(dataToShow);
 
-        const roleName = (user?.rol?.name || '').toLowerCase();
-        const expectedByRole = { 'carga': 1, 'control': 2, 'aprobacion': 3, 'aprobación': 3 };
-        const expected = expectedByRole[roleName];
-
         const processed = rows.map(r => {
+            const expected = Number(r.expectedRowStatusId || 0) || null;
             // rowStatusId viene del SP (Id del estado actual). Si no viene, lo trato como expected.
             const currentStatus = Number(r.rowStatusId ?? expected);
             const isFinal = currentStatus === 4;
             const isAhead = expected != null ? currentStatus > expected : false;
 
-            // Habilitado = está exactamente en el estado del rol (pendiente), no finalizado, no adelantado.
             const isEnabled = expected != null ? (!isFinal && !isAhead && currentStatus === expected) : false;
 
             return {
@@ -136,7 +132,6 @@ export const RegistroGrid = ({ user }) => {
                 isEnabled,
                 isFinal,
                 isSentAhead: isAhead,
-                // alias para no tocar tu UI/handlers: “isLatest” == habilitado
                 isLatest: isEnabled,
             };
         });
@@ -266,12 +261,10 @@ export const RegistroGrid = ({ user }) => {
                 return;
             }
 
-            await sendDataForward(companySelectedId, ids); // <-- PASO IDS
-            message.success(`Se enviaron ${ids.length} registro(s).`);
+            await sendDataForward(companySelectedId, ids); // mensajes los maneja useHome
             await refreshData();
         } catch (err) {
             console.error(err);
-            message.error('No se pudo enviar.');
         } finally {
             setOpenConfirmSendFile(false);
         }
@@ -283,12 +276,10 @@ export const RegistroGrid = ({ user }) => {
             const ids = dataGrid.filter(r => r.isEnabled).map(r => r?.datosAnioActual?.id).filter(Boolean);
             if (ids.length === 0) { message.info('No hay registros habilitados para devolver.'); return; }
 
-            await sendDataToReturn(companySelectedId, returnNotes, ids); // <-- nuevo: paso IDs
-            message.success(`Se devolvieron ${ids.length} registro(s).`);
+            await sendDataToReturn(companySelectedId, returnNotes, ids); // mensajes los maneja useHome
             await refreshData();
         } catch (err) {
             console.error(err);
-            message.error('No se pudo devolver.');
         } finally {
             setOpenConfirmReturnFile(false);
             setReturnNotes('');
@@ -334,6 +325,10 @@ export const RegistroGrid = ({ user }) => {
     };
 
     const handleRowClick = row => {
+        // Evitar abrir edición si hay algún Dialog/Modal activo (MUI agrega esta clase al body)
+        if (typeof document !== 'undefined' && document.body.classList.contains('MuiModal-open')) {
+            return;
+        }
         if (!row.isLatest) return;
         setSelectedRow(row);
         if (isCompact) setDetailOpen(true);
@@ -502,15 +497,15 @@ export const RegistroGrid = ({ user }) => {
                                 </tr>
                                 <tr>
                                     <th className="blue-header">Unidades</th>
-                                    <th className="blue-header">Precio Prom.</th>
-                                    <th className="blue-header">Valores ARS</th>
+                                    <th className="blue-header">Precio AVG</th>
+                                    <th className="blue-header">Valores Moneda Local</th>
                                     <th className="blue-header">Valores USD</th>
-                                    <th className="blue-header">TC Prom.</th>
+                                    <th className="blue-header">TC AVG</th>
                                     <th className="yellow-header">Unidades</th>
-                                    <th className="yellow-header">Precio Prom.</th>
-                                    <th className="yellow-header">Valores ARS</th>
+                                    <th className="yellow-header">Precio AVG</th>
+                                    <th className="yellow-header">Valores Moneda Local</th>
                                     <th className="yellow-header">Valores USD</th>
-                                    <th className="yellow-header">TC Prom.</th>
+                                    <th className="yellow-header">TC AVG</th>
                                     <th className="green-header">Total %</th>
                                     <th className="green-header">Vol %</th>
                                     <th className="green-header">Precio %</th>
@@ -738,7 +733,7 @@ export const RegistroGrid = ({ user }) => {
                 <DialogTitle>Devolver registro</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        ¿Queres devolver los registros para su corrección? Podés dejar observaciones:
+                        ¿Querés devolver los registros para su corrección? Podés dejar observaciones:
                     </DialogContentText>
 
                     <Box sx={{ mt: 2 }}>

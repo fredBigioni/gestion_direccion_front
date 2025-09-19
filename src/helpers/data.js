@@ -29,6 +29,7 @@ export function transformToGridRows(rawRows) {
         const tcCurr = Number(item.TCCurrentYear) || 0;
 
         const hasRoleAccess = item.HasRoleAccess || 0;
+        const expectedRowStatusId = Number(item.ExpectedRowStatusId ?? 0) || 0;
         // RowStatus del registro del año actual (intentamos cubrir distintos nombres posibles)
         const rowStatusId = Number(
             item.RowStatusIdCurrentYear ??
@@ -59,7 +60,8 @@ export function transformToGridRows(rawRows) {
             datosAnioActual: { id: idCurr, unidades: unidadesCurr, precio: precioCurr, monedaLocal: arsCurr, usd: usdCurr, tc: tcCurr },
             variacion: { total: totalPct, vol: volPct, precio: precioPct },
             hasRoleAccess,
-            rowStatusId
+            rowStatusId,
+            expectedRowStatusId,
         };
     });
 }
