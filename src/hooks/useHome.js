@@ -3,6 +3,7 @@ import { useCallback, useRef } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import {
     companiesState,
+    countriesState,
     companyTypesState,
     dataToShowState,
     loadingState,
@@ -15,6 +16,7 @@ import useAuth from "./useAuth";
 const useHome = () => {
     const [isLoading, setIsLoading] = useRecoilState(loadingState);
     const [companies, setCompanies] = useRecoilState(companiesState);
+    const [countries, setCountries] = useRecoilState(countriesState);
     const [companyTypes, setCompanyTypes] = useRecoilState(companyTypesState);
     const [dataToShow, setDataToShow] = useRecoilState(dataToShowState);
     const { auth } = useAuth();
@@ -25,18 +27,39 @@ const useHome = () => {
     // Ref para recordar últimos filtros usados en getData
     const lastFiltersRef = useRef({ companyTypeId: null, userId: null });
 
-    const getAllCompanies = useCallback(async () => {
+    const getCompaniesByUser = useCallback(async (userId) => {
+        if (!userId) {
+            setCompanies([]);
+            return;
+        }
         try {
             setIsLoading(true);
-            const response = await api.get(`/home/getAllCompanies`);
-            setCompanies(response.data.companies);
+            const response = await api.get(`/home/getCompaniesByUser/${userId}`);
+            setCompanies(response.data.companies ?? []);
         } catch (error) {
             console.error(error);
-            message.error(`Error al obtener las compañías: ${error}`);
+            message.error(`Error al obtener las companias del usuario: ${error}`);
         } finally {
             setIsLoading(false);
         }
     }, [setCompanies, setIsLoading]);
+
+    const getCountriesByUser = useCallback(async (userId) => {
+        if (!userId) {
+            setCountries([]);
+            return;
+        }
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/home/getCountriesByUser/${userId}`);
+            setCountries(response.data.countries ?? []);
+        } catch (error) {
+            console.error(error);
+            message.error(`Error al obtener los paises del usuario: ${error}`);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setCountries, setIsLoading]);
 
     const getAllCompanyTypes = useCallback(
         async (companyId) => {
@@ -274,7 +297,8 @@ const useHome = () => {
     }
 
     return {
-        getAllCompanies,
+        getCompaniesByUser,
+        getCountriesByUser,
         getAllCompanyTypes,
         getData,
         refreshData,
@@ -284,9 +308,14 @@ const useHome = () => {
         getDataReportLog,
         companies,
         companyTypes,
+        countries,
         dataToShow,
         isLoading,
     };
 };
 
 export default useHome;
+
+
+
+

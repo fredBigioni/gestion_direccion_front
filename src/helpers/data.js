@@ -17,12 +17,14 @@ export function transformToGridRows(rawRows) {
         const idCurr = Number(item.IdCurrentYear) || 0;
 
         const unidadesPrev = Number(item.UnitPrevYear) || 0;
+        const unidadesConvertidasPrev = Number(item.UnitConvertedPrevYear) || 0;
         const precioPrev = Number(item.AvgPricePrevYear) || 0;
         const arsPrev = Number(item.ValueLocalCurrencyPrevYear) || 0;
         const usdPrev = Number(item.ValueUSDPrevYear) || 0;
         const tcPrev = Number(item.TCPrevYear) || 0;
 
         const unidadesCurr = Number(item.UnitCurrentYear) || 0;
+        const unidadesConvertidasCurr = Number(item.UnitConvertedCurrentYear) || 0;
         const precioCurr = Number(item.AvgPriceCurrentYear) || 0;
         const arsCurr = Number(item.ValueLocalCurrencyCurrentYear) || 0;
         const usdCurr = Number(item.ValueUSDCurrentYear) || 0;
@@ -56,8 +58,8 @@ export function transformToGridRows(rawRows) {
             mes,
             idPrevYear: idPrev,
             idCurrentYear: idCurr,
-            datosAnioAnterior: { id: idPrev, unidades: unidadesPrev, precio: precioPrev, monedaLocal: arsPrev, usd: usdPrev, tc: tcPrev },
-            datosAnioActual: { id: idCurr, unidades: unidadesCurr, precio: precioCurr, monedaLocal: arsCurr, usd: usdCurr, tc: tcCurr },
+            datosAnioAnterior: { id: idPrev, unidades: unidadesPrev, unidadesConvertidas: unidadesConvertidasPrev, precio: precioPrev, monedaLocal: arsPrev, usd: usdPrev, tc: tcPrev },
+            datosAnioActual: { id: idCurr, unidades: unidadesCurr, unidadesConvertidas: unidadesConvertidasCurr, precio: precioCurr, monedaLocal: arsCurr, usd: usdCurr, tc: tcCurr },
             variacion: { total: totalPct, vol: volPct, precio: precioPct },
             hasRoleAccess,
             rowStatusId,

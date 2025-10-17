@@ -3,12 +3,17 @@ import { atom } from 'recoil';
 
 export const companiesState = atom({
     key: 'companiesState',
-    default: false
+    default: []
+});
+
+export const countriesState = atom({
+    key: 'countriesState',
+    default: []
 });
 
 export const companyTypesState = atom({
     key: 'companyTypesState',
-    default: false
+    default: []
 });
 
 export const dataToShowState = atom({

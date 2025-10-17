@@ -109,14 +109,16 @@ export const RegistroGrid = ({ user }) => {
         if (!Array.isArray(dataToShow) || dataToShow.length === 0) {
             setDataGrid([]);
             setTotals({
-                datosAnioAnterior: { unidades: 0, precio: 0, monedaLocal: 0, usd: 0, tc: 0 },
-                datosAnioActual: { unidades: 0, precio: 0, monedaLocal: 0, usd: 0, tc: 0 },
+                datosAnioAnterior: { unidades: 0, unidadesConvertidas: 0, precio: 0, monedaLocal: 0, usd: 0, tc: 0 },
+                datosAnioActual: { unidades: 0, unidadesConvertidas: 0, precio: 0, monedaLocal: 0, usd: 0, tc: 0 },
                 variacion: { total: 0, vol: 0, precio: 0 }
             });
             return;
         }
 
         const rows = transformToGridRows(dataToShow);
+
+        debugger;
 
         const processed = rows.map(r => {
             const expected = Number(r.expectedRowStatusId || 0) || null;
@@ -490,21 +492,23 @@ export const RegistroGrid = ({ user }) => {
                                 <tr>
                                     <th rowSpan={2} className="header-year">Mes</th>
                                     <th rowSpan={2} className="header-year">Representación</th>
-                                    <th colSpan={5} className="header-year">{previousYear}</th>
-                                    <th colSpan={5} className="header-year">{currentYear}</th>
+                                    <th colSpan={6} className="header-year">{previousYear}</th>
+                                    <th colSpan={6} className="header-year">{currentYear}</th>
                                     <th colSpan={3} className="header-year">Variación</th>
                                     <RegistroGridHeaderActions user={user} />
                                 </tr>
                                 <tr>
                                     <th className="blue-header">Unidades</th>
+                                    <th className="blue-header">Unidades Convertidas</th>
                                     <th className="blue-header">Precio AVG</th>
-                                    <th className="blue-header">Valores Moneda Local</th>
-                                    <th className="blue-header">Valores USD</th>
+                                    <th className="blue-header">Valor Moneda Local</th>
+                                    <th className="blue-header">Valor USD</th>
                                     <th className="blue-header">TC AVG</th>
                                     <th className="yellow-header">Unidades</th>
+                                    <th className="yellow-header">Unidades Convertidas</th>
                                     <th className="yellow-header">Precio AVG</th>
-                                    <th className="yellow-header">Valores Moneda Local</th>
-                                    <th className="yellow-header">Valores USD</th>
+                                    <th className="yellow-header">Valor Moneda Local</th>
+                                    <th className="yellow-header">Valor USD</th>
                                     <th className="yellow-header">TC AVG</th>
                                     <th className="green-header">Total %</th>
                                     <th className="green-header">Vol %</th>
@@ -546,11 +550,13 @@ export const RegistroGrid = ({ user }) => {
                                                 <td style={{ fontWeight: 'bold' }}>{row.mes}</td>
                                                 <td style={{ fontWeight: 'bold' }}>{row.representacion}</td>
                                                 <td>{formatNumber(row.datosAnioAnterior.unidades)}</td>
+                                                <td>{formatNumber(row.datosAnioAnterior.unidadesConvertidas)}</td>
                                                 <td>{formatNumberDecimals(row.datosAnioAnterior.precio, 1)}</td>
                                                 <td>{formatNumber(row.datosAnioAnterior.monedaLocal)}</td>
                                                 <td>{formatNumber(row.datosAnioAnterior.usd)}</td>
                                                 <td>{formatNumberDecimals(row.datosAnioAnterior.tc, 2)}</td>
                                                 <td>{formatNumber(row.datosAnioActual.unidades)}</td>
+                                                <td>{formatNumber(row.datosAnioActual.unidadesConvertidas)}</td>
                                                 <td>{formatNumberDecimals(row.datosAnioActual.precio, 2)}</td>
                                                 <td>{formatNumber(row.datosAnioActual.monedaLocal)}</td>
                                                 <td>{formatNumber(row.datosAnioActual.usd)}</td>
@@ -576,6 +582,7 @@ export const RegistroGrid = ({ user }) => {
                             <tr className="totales-row">
                                 <td colSpan={2}>Totales</td>
                                 <td>{formatNumber(totals.datosAnioAnterior.unidades)}</td>
+                                <td>{formatNumber(totals.datosAnioAnterior.unidadesConvertidas)}</td>
                                 <td>
                                     {formatNumberDecimals(totals.datosAnioAnterior.precio, 1)}
                                 </td>
@@ -585,6 +592,7 @@ export const RegistroGrid = ({ user }) => {
                                     {formatNumberDecimals(totals.datosAnioAnterior.tc, 1)}
                                 </td>
                                 <td>{formatNumber(totals.datosAnioActual.unidades)}</td>
+                                <td>{formatNumber(totals.datosAnioActual.unidadesConvertidas)}</td>
                                 <td>
                                     {formatNumberDecimals(totals.datosAnioActual.precio, 1)}
                                 </td>

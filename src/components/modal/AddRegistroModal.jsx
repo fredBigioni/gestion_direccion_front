@@ -41,7 +41,6 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
     const [focus, setFocus] = useState({
         unidades: false,
         unidadesConvertidas: false,
-        valores: false,
         valoresLocal: false,
         tc: false,
     });
@@ -78,15 +77,39 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
             : formattedInt;
     };
 
-    // Calcula precio promedio automáticamente
-    useEffect(() => {
-        const unidadesNum = parseFloat(form.unidades) || 0;
-        const valoresNum = parseFloat(form.valores) || 0;
-        const promedioCalc = unidadesNum > 0
-            ? (valoresNum / unidadesNum).toFixed(2)
-            : '';
-        setForm(f => ({ ...f, promedio: promedioCalc }));
-    }, [form.unidades, form.valores]);
+    const unidadesNum = parseFloat(form.unidades);
+    const valoresLocalNum = parseFloat(form.valoresLocal);
+    const tcNum = parseFloat(form.tc);
+    const valoresPrevNum = parseFloat(form.valores);
+
+    const hasUnidades = !Number.isNaN(unidadesNum) && unidadesNum > 0;
+    const canComputeValores = !Number.isNaN(valoresLocalNum) && !Number.isNaN(tcNum) && tcNum !== 0;
+
+    const valoresUsdRounded = canComputeValores
+        ? Math.round(valoresLocalNum / tcNum)
+        : Number.NaN;
+
+    const valoresUsdComputedStr = !Number.isNaN(valoresUsdRounded)
+        ? valoresUsdRounded.toString()
+        : '';
+
+    const valoresUsdForDisplay = valoresUsdComputedStr !== ''
+        ? valoresUsdComputedStr
+        : (form.valores || '');
+
+    const valoresUsdForAverage = valoresUsdComputedStr !== ''
+        ? valoresUsdRounded
+        : (!Number.isNaN(valoresPrevNum) ? valoresPrevNum : Number.NaN);
+
+    const canComputePromedio = hasUnidades && !Number.isNaN(valoresUsdForAverage);
+
+    const promedioComputedStr = canComputePromedio
+        ? (valoresUsdForAverage / unidadesNum).toFixed(4)
+        : '';
+
+    const promedioForDisplay = promedioComputedStr !== ''
+        ? promedioComputedStr
+        : (form.promedio || '');
 
     // Inicializa form y files al abrir
     useEffect(() => {
@@ -100,6 +123,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
             }
             const periodoValue = initialData.mes || '';
             const unidadesRaw = initialData.datosAnioActual?.unidades?.toString() ?? '';
+            const unidadesConvertidasRaw = initialData.datosAnioActual?.unidadesConvertidas?.toString() ?? '';
             const valoresRaw = initialData.datosAnioActual?.usd?.toString() ?? '';
             const valoresLocalRaw = initialData.datosAnioActual?.monedaLocal?.toString() ?? '';
             const promedioRaw = initialData.datosAnioActual?.precio?.toString() ?? '';
@@ -109,15 +133,16 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                 tipo: tipoValue,
                 periodo: periodoValue,
                 unidades: unidadesRaw,
+                unidadesConvertidas: unidadesConvertidasRaw,
                 valores: valoresRaw,
                 valoresLocal: valoresLocalRaw,
                 promedio: promedioRaw,
                 tc: tcRaw,
             });
-            setFocus({ unidades: false, valores: false, valoresLocal: false, tc: false });
+            setFocus({ unidadesConvertidas: false, unidades: false, valoresLocal: false, tc: false });
         } else {
-            setForm({ tipo: '', periodo: '', unidades: '', valores: '', valoresLocal: '', promedio: '', tc: '' });
-            setFocus({ unidades: false, valores: false, valoresLocal: false, tc: false });
+            setForm({ tipo: '', periodo: '', unidadesConvertidas: '', unidades: '', valores: '', valoresLocal: '', promedio: '', tc: '' });
+            setFocus({ unidadesConvertidas: false, unidades: false, valoresLocal: false, tc: false });
         }
         setFiles([]);
     }, [open, initialData, isEditMode, companyTypes]);
@@ -138,8 +163,25 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
 
     const handleFocus = field => () =>
         setFocus(f => ({ ...f, [field]: true }));
-    const handleBlur = field => () =>
+    const handleBlur = field => () => {
         setFocus(f => ({ ...f, [field]: false }));
+
+        if (field === 'tc') {
+            setForm(prev => {
+                const raw = prev.tc;
+                if (raw === '') return prev;
+                const num = parseFloat(raw);
+                if (Number.isNaN(num)) return prev;
+
+                const formatted = Math.round(num).toString();
+                if (prev.tc === formatted) {
+                    return prev;
+                }
+
+                return { ...prev, tc: formatted };
+            });
+        }
+    };
 
     // Archivos
     const handleFileChange = e => {
@@ -148,9 +190,11 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
 
     const isFormValid = Boolean(form.tipo && form.periodo
         && String(form.unidades ?? '').trim() !== ''
-        && String(form.valores ?? '').trim() !== ''
+        && String(form.unidadesConvertidas ?? '').trim() !== ''
         && String(form.valoresLocal ?? '').trim() !== ''
-        && String(form.tc ?? '').trim() !== '');
+        && String(form.tc ?? '').trim() !== ''
+        && valoresUsdForDisplay !== ''
+        && promedioForDisplay !== '');
 
     const handleSave = async () => {
         if (!isFormValid) return;
@@ -158,15 +202,17 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
         payload.append('tipo', form.tipo);
         payload.append('periodo', form.periodo);
         payload.append('unidades', form.unidades);
+        payload.append('unidadesConvertidas', form.unidadesConvertidas);
         payload.append('valoresLocal', form.valoresLocal);
-        payload.append('valores', form.valores);
-        payload.append('promedio', form.promedio);
+        payload.append('valores', valoresUsdForDisplay);
+        payload.append('promedio', promedioForDisplay);
         payload.append('tc', form.tc);
         files.forEach(file => payload.append('documentos', file));
 
         try {
             if (isEditMode) {
                 const id = initialData.datosAnioActual?.id || initialData.idCurrentYear;
+                debugger;
                 await updateData(id, payload);
             } else {
                 await createData(payload);
@@ -262,7 +308,7 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
 
                     <TextField
                         fullWidth size="small"
-                        label="Valores En Pesos"
+                        label="Valores En Moneda Local"
                         value={focus.valoresLocal
                             ? form.valoresLocal
                             : formatDisplay(form.valoresLocal)
@@ -270,26 +316,6 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                         onChange={handleNumericChange('valoresLocal')}
                         onFocus={handleFocus('valoresLocal')}
                         onBlur={handleBlur('valoresLocal')}
-                    />
-                    {/* Valores USD */}
-                    <TextField
-                        fullWidth size="small"
-                        label="Valores USD"
-                        value={focus.valores
-                            ? form.valores
-                            : formatDisplay(form.valores)
-                        }
-                        onChange={handleNumericChange('valores')}
-                        onFocus={handleFocus('valores')}
-                        onBlur={handleBlur('valores')}
-                    />
-
-                    {/* Precio Promedio (calculado) */}
-                    <TextField
-                        fullWidth size="small"
-                        label="Precio Promedio"
-                        value={formatDisplay(form.promedio)}
-                        disabled
                     />
 
                     {/* TC USD Promedio */}
@@ -303,6 +329,22 @@ export const AddRegistroModal = ({ open, onClose, initialData, onSuccess }) => {
                         onChange={handleNumericChange('tc')}
                         onFocus={handleFocus('tc')}
                         onBlur={handleBlur('tc')}
+                    />
+
+                    {/* Valores USD */}
+                    <TextField
+                        fullWidth size="small"
+                        label="Valores USD"
+                        value={formatDisplay(valoresUsdForDisplay)}
+                        disabled
+                    />
+
+                    {/* Precio Promedio */}
+                    <TextField
+                        fullWidth size="small"
+                        label="Precio Promedio"
+                        value={formatDisplay(promedioForDisplay)}
+                        disabled
                     />
 
                     {/* Archivos */}
